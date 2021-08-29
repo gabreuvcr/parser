@@ -79,39 +79,309 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <class_> class
 
 /* You will want to change the following line. */
-%type <features> dummy_feature_list
+%type <features> feature_list
+%type <feature> feature
+%type <formals> formal_list
+%type <formal> formal
+
+%type <expressions> expression_block
+%type <expressions> expression_list
+%type <expression> expression
+
+%type <expression> case_expression
+%type <cases> case_list
+%type <case_> case
+
+%type <expression> let_expression
+%type <feature> let_attr
+%type <features> let_rest
 
 /* Precedence declarations go here. */
-
+%right ASSIGN
+%nonassoc NOT
+%nonassoc LE '<' '='
+%left '+' '-'
+%left '*' '/'
+%nonassoc ISVOID
+%nonassoc '~' 
+%nonassoc '@' 
+%nonassoc '.' 
 
 %%
 /* 
    Save the root of the abstract syntax tree in a global variable.
 */
-program	: class_list	{ @$ = @1; ast_root = program($1); }
-        ;
+program	
+  : class_list	
+  { 
+    @$ = @1;
+    ast_root = program($1);
+  }
+  ;
 
 class_list
 	: class			/* single class */
-		{ $$ = single_Classes($1);
-                  parse_results = $$; }
+  { 
+    $$ = single_Classes($1);
+    parse_results = $$;
+  }
 	| class_list class	/* several classes */
-		{ $$ = append_Classes($1,single_Classes($2)); 
-                  parse_results = $$; }
+	{ 
+    $$ = append_Classes($1, single_Classes($2)); 
+    parse_results = $$;
+  }
 	;
 
 /* If no parent is specified, the class inherits from the Object class. */
-class	: CLASS TYPEID '{' dummy_feature_list '}' ';'
-		{ $$ = class_($2,idtable.add_string("Object"),$4,
-			      stringtable.add_string(curr_filename)); }
-	| CLASS TYPEID INHERITS TYPEID '{' dummy_feature_list '}' ';'
-		{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
+class	
+  : CLASS TYPEID '{' feature_list '}' ';'
+	{ 
+    $$ = class_($2, idtable.add_string("Object"), $4,
+		stringtable.add_string(curr_filename));
+  }
+	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
+	{ 
+    $$ = class_($2, $4, $6, stringtable.add_string(curr_filename));
+  }
 	;
 
 /* Feature list may be empty, but no empty features in list. */
-dummy_feature_list:		/* empty */
-                {  $$ = nil_Features(); }
+feature_list
+  : /* empty */
+  {  
+    $$ = nil_Features(); 
+  }
+  | feature_list feature
+  {
+    $$ = append_Features($1, single_Features($2));
+  }
+  ;
 
+feature
+  : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
+  {
+    $$ = method($1, $3, $6, $8);
+  }
+  | OBJECTID ':' TYPEID ASSIGN expression ';'
+  {
+    $$ = attr($1, $3, $5);
+  }
+  | OBJECTID ':' TYPEID ';'
+  {
+    $$ = attr($1, $3, no_expr());
+  }
+  ;
+
+formal_list
+  : /* empty */
+  {
+    $$ = nil_Formals();
+  }
+  | formal
+  {
+    $$ = single_Formals($1);
+  }
+  | formal_list ',' formal
+  {
+    $$ = append_Formals($1, single_Formals($3));
+  }
+  ;
+
+formal
+  : OBJECTID ':' TYPEID
+  {
+    $$ = formal($1, $3);
+  }
+  ;
+
+expression_block
+  : expression
+  {
+    $$ = single_Expressions($1);
+  }
+  | expression_block ';' expression ';'
+  {
+    $$ = append_Expressions($1, single_Expressions($3));
+  }
+  ;
+
+expression_list
+  : /* empty */
+  {
+    $$ = nil_Expressions();
+  }
+  | expression
+  {
+    $$ = single_Expressions($1);
+  }
+  | expression_list ',' expression
+  {
+    $$ = append_Expressions($1, single_Expressions($3));
+  }
+  ;
+
+case_list
+  : case
+  {
+    $$ = single_Cases($1);
+  }
+  : case_list case
+  {
+    $$ = append_Cases($1, single_Cases($2));
+  }
+
+case
+  : OBJECTID ':' TYPEID DARROW expression ';'
+  {
+    $$ = branch($1, $3, $5);
+  }
+
+case_expression
+  : CASE expression OF case_list ESAC
+  {
+    $$ = typcase($2, $4);
+  }
+  ;
+
+expression
+  : OBJECTID ASSIGN expression
+  {
+    $$ = assign($1, $3);
+  }
+  | expression '@' TYPEID '.' OBJECTID '(' expression_list ')'
+  {
+    $$ = static_dispatch($1, $3, $5, $7);
+  }
+  | expression '.' OBJECTID '(' expression_list ')'
+  {
+    $$ = dispatch($1, $3, $5);
+  }
+  | OBJECTID '(' expression_list ')'
+  {
+    $$ = dispatch(object(idtable.add_string("self")), $1, $3);
+  }
+  | IF expression THEN expression FI
+  {
+    $$ = cond($2, $4, no_expr());
+  }
+  | IF expression THEN expression ELSE expression FI
+  {
+    $$ = cond($2, $4, $6);
+  }
+  | WHILE expression LOOP expression POOL
+  {
+    $$ = loop($2, $4);
+  }
+  | '{' expression_block '}'
+  {
+    $$ = block($2);
+  }
+  | let_expression
+  | case_expression
+  | NEW TYPEID
+  {
+    $$ = new_($2);
+  }
+  | ISVOID expression
+  {
+    $$ = isvoid($2);
+  }
+  | expression '+' expression
+  {
+    $$ = plus($1, $3);
+  }
+  | expression '-' expression
+  {
+    $$ = sub($1, $3);
+  }
+  | expression '*' expression
+  {
+    $$ = mul($1, $3);  
+  }
+  | expression '/' expression
+  {
+    $$ = divide($1, $3);
+  }
+  | '~' expression 
+  {
+    $$ = neg($2);
+  }
+  | expression '<' expression
+  {
+    $$ = lt($1, $3);
+  }
+  | expression '<=' expression
+  {
+    $$ = leq($1, $3);
+  }
+  | expression '=' expression
+  {
+    $$ = eq($1, $3);
+  }
+  | NOT expression
+  {
+    $$ = comp($2);
+  }
+  | '(' expression ')'
+  {
+    $$ = $2;
+  }
+  | OBJECTID
+  {
+    $$ = object($1);
+  }
+  | INT_CONST
+  {
+    $$ = int_const($1);
+  }
+  | BOOL_CONST
+  {
+    $$ = bool_const($1);
+  }
+  | STR_CONST
+  {
+    $$ = string_const($1);
+  }
+  ;
+
+let_expression
+  : LET let_attr let_rest IN expression
+  {
+    Features otherLets = $3;
+    Expression inExpr = $5;
+
+    int size = otherLets->len();
+    for(int i = size - 1; i >= 0; i--) {
+      attr_class* letAttr = (attr_class*)otherLets->nth(i);
+      inExpr = let(letAttr->get_name(), letAttr->get_type_decl(), letAttr->get_init(), inExpr);
+    }
+    attr_class* firstAttr = (attr_class*)($2);
+    $$ = let(firstAttr->get_name(), firstAttr->get_type(), firstAttr->get_init(), inExpr);
+  }
+  ;
+
+let_attr
+  : OBJECTID ':' TYPEID
+  {
+    $$ = attr($1, $3, no_expr());
+  }
+  | OBJECTID ':' TYPEID ASSIGN expression
+  {
+    $$ = attr($1, $3, $5);
+  }
+  ;
+
+let_rest
+  :
+  {
+    $$ = nil_Features();
+  }
+  | let_rest ',' let_attr
+  {
+    $$ = append_Features($1, single_Features($3));
+  }
+  ;
+  
 
 /* end of grammar */
 %%
