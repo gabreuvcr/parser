@@ -93,8 +93,8 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <case_> case
 
 %type <expression> let_expression
-%type <feature> let_attr
-%type <features> let_rest
+// %type <feature> let_attr
+// %type <features> let_rest
 
 /* Precedence declarations go here. */
 %right ASSIGN
@@ -151,22 +151,22 @@ feature_list
   {  
     $$ = nil_Features(); 
   }
-  | feature_list feature
+  | feature_list feature ';'
   {
     $$ = append_Features($1, single_Features($2));
   }
   ;
 
 feature
-  : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
+  : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}'
   {
     $$ = method($1, $3, $6, $8);
   }
-  | OBJECTID ':' TYPEID ASSIGN expression ';'
+  | OBJECTID ':' TYPEID ASSIGN expression
   {
     $$ = attr($1, $3, $5);
   }
-  | OBJECTID ':' TYPEID ';'
+  | OBJECTID ':' TYPEID
   {
     $$ = attr($1, $3, no_expr());
   }
@@ -195,13 +195,13 @@ formal
   ;
 
 expression_block
-  : expression
+  : expression ';'
   {
     $$ = single_Expressions($1);
   }
-  | expression_block ';' expression ';'
+  | expression_block expression ';'
   {
-    $$ = append_Expressions($1, single_Expressions($3));
+    $$ = append_Expressions($1, single_Expressions($2));
   }
   ;
 
@@ -225,7 +225,7 @@ case_list
   {
     $$ = single_Cases($1);
   }
-  : case_list case
+  | case_list case
   {
     $$ = append_Cases($1, single_Cases($2));
   }
@@ -276,7 +276,10 @@ expression
   {
     $$ = block($2);
   }
-  | let_expression
+  | LET let_expression 
+  { 
+    $$ = $2;
+  }
   | case_expression
   | NEW TYPEID
   {
@@ -310,9 +313,9 @@ expression
   {
     $$ = lt($1, $3);
   }
-  | expression '<=' expression
+  | expression '<' '=' expression
   {
-    $$ = leq($1, $3);
+    $$ = leq($1, $4);
   }
   | expression '=' expression
   {
@@ -344,43 +347,62 @@ expression
   }
   ;
 
-let_expression
-  : LET let_attr let_rest IN expression
-  {
-    Features otherLets = $3;
-    Expression inExpr = $5;
+let_expression 
+  : OBJECTID ':' TYPEID IN expression 
+  { 
+    $$ = let($1, $3, no_expr(), $5); 
+  }
+  | OBJECTID ':' TYPEID ASSIGN expression IN expression 
+  { 
+    $$ = let($1, $3, $5, $7);
+  }
+  | OBJECTID ':' TYPEID ',' let_expression 
+  { 
+    $$ = let($1, $3, no_expr(), $5); 
+  }
+  | OBJECTID ':' TYPEID ASSIGN expression ',' let_expression 
+  { 
+    $$ = let($1, $3, $5, $7); 
+  }
+;
 
-    int size = otherLets->len();
-    for(int i = size - 1; i >= 0; i--) {
-      attr_class* letAttr = (attr_class*)otherLets->nth(i);
-      inExpr = let(letAttr->get_name(), letAttr->get_type_decl(), letAttr->get_init(), inExpr);
-    }
-    attr_class* firstAttr = (attr_class*)($2);
-    $$ = let(firstAttr->get_name(), firstAttr->get_type(), firstAttr->get_init(), inExpr);
-  }
-  ;
+// let_expression
+//   : LET let_attr let_rest IN expression
+//   {
+//     Features otherLets = $3;
+//     Expression inExpr = $5;
 
-let_attr
-  : OBJECTID ':' TYPEID
-  {
-    $$ = attr($1, $3, no_expr());
-  }
-  | OBJECTID ':' TYPEID ASSIGN expression
-  {
-    $$ = attr($1, $3, $5);
-  }
-  ;
+//     int size = otherLets->len();
+//     for(int i = size - 1; i >= 0; i--) {
+//       attr_class* letAttr = (attr_class*)otherLets->nth(i);
+//       inExpr = let(letAttr->get_name(), letAttr->get_type_decl(), letAttr->get_init(), inExpr);
+//     }
+//     attr_class* firstAttr = (attr_class*)($2);
+//     $$ = let(firstAttr->get_name(), firstAttr->get_type(), firstAttr->get_init(), inExpr);
+//   }
+//   ;
 
-let_rest
-  :
-  {
-    $$ = nil_Features();
-  }
-  | let_rest ',' let_attr
-  {
-    $$ = append_Features($1, single_Features($3));
-  }
-  ;
+// let_attr
+//   : OBJECTID ':' TYPEID
+//   {
+//     $$ = attr($1, $3, no_expr());
+//   }
+//   | OBJECTID ':' TYPEID ASSIGN expression
+//   {
+//     $$ = attr($1, $3, $5);
+//   }
+//   ;
+
+// let_rest
+//   :
+//   {
+//     $$ = nil_Features();
+//   }
+//   | let_rest ',' let_attr
+//   {
+//     $$ = append_Features($1, single_Features($3));
+//   }
+//   ;
   
 
 /* end of grammar */
