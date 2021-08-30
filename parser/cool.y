@@ -313,9 +313,9 @@ expression
   {
     $$ = lt($1, $3);
   }
-  | expression '<' '=' expression
+  | expression LE expression
   {
-    $$ = leq($1, $4);
+    $$ = leq($1, $3);
   }
   | expression '=' expression
   {
