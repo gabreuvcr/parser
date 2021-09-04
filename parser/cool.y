@@ -365,44 +365,6 @@ let_expression
     $$ = let($1, $3, $5, $7); 
   }
 ;
-
-// let_expression
-//   : LET let_attr let_rest IN expression
-//   {
-//     Features otherLets = $3;
-//     Expression inExpr = $5;
-
-//     int size = otherLets->len();
-//     for(int i = size - 1; i >= 0; i--) {
-//       attr_class* letAttr = (attr_class*)otherLets->nth(i);
-//       inExpr = let(letAttr->get_name(), letAttr->get_type_decl(), letAttr->get_init(), inExpr);
-//     }
-//     attr_class* firstAttr = (attr_class*)($2);
-//     $$ = let(firstAttr->get_name(), firstAttr->get_type(), firstAttr->get_init(), inExpr);
-//   }
-//   ;
-
-// let_attr
-//   : OBJECTID ':' TYPEID
-//   {
-//     $$ = attr($1, $3, no_expr());
-//   }
-//   | OBJECTID ':' TYPEID ASSIGN expression
-//   {
-//     $$ = attr($1, $3, $5);
-//   }
-//   ;
-
-// let_rest
-//   :
-//   {
-//     $$ = nil_Features();
-//   }
-//   | let_rest ',' let_attr
-//   {
-//     $$ = append_Features($1, single_Features($3));
-//   }
-//   ;
   
 
 /* end of grammar */

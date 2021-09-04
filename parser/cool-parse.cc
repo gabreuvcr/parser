@@ -2283,7 +2283,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 409 "cool.y"
+#line 371 "cool.y"
 
 
 /* This function is called automatically when Bison detects a parse error. */
