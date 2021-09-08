@@ -116,21 +116,19 @@ class Main inherits IO {
                 esac;
 
                 out_string("test @:\n");
-                out_string("    ");
-                out_int(test_B.getX());
-                out_string("\n");
+                out_string("    ").out_int(test_B.getX()).out_string("\n");
 
                 out_string("test_if_function:\n");
                 let return_test_if: Bool <- test_if_function(test_A) in {
                     out_string("    ");
                     out_bool(return_test_if);
+                    out_string("\n");
                 };
 
                 out_string("test_while_function:\n");
                 out_string("    ");
                 let return_test_while: Int <- test_while_function(~5) in {
-                    out_int(return_test_while);
-                    out_string("\n");
+                    out_int(return_test_while).out_string("\n");
                 };
 
 
@@ -139,10 +137,12 @@ class Main inherits IO {
                     out_string("    uninitialized variable: ");
                     out_bool(isvoid test_isvoid);
                 };
+                out_string("\n");
                 let test_isvoid: Int <- 10 in {
                     out_string("    initialized variable: ");
                     out_bool(isvoid test_isvoid);
                 };
+                out_string("\n");
 
                 test_expressions_function();
         }

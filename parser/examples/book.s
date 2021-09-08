@@ -242,12 +242,18 @@ str_const1:
 	.word	-1
 str_const0:
 	.word	9
-	.word	6
+	.word	9
 	.word	String_dispTab
-	.word	int_const6
-	.ascii	"book.cl"
+	.word	int_const16
+	.ascii	"examples/book.cl"
 	.byte	0	
 	.align	2
+	.word	-1
+int_const16:
+	.word	7
+	.word	4
+	.word	Int_dispTab
+	.word	16
 	.word	-1
 int_const15:
 	.word	7

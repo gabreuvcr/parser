@@ -120,12 +120,12 @@ program
   ;
 
 class_list
-	: class			/* single class */
+	: class	';'		/* single class */
   { 
     $$ = single_Classes($1);
     parse_results = $$;
   }
-	| class_list class	/* several classes */
+	| class_list class ';'	/* several classes */
 	{ 
     $$ = append_Classes($1, single_Classes($2)); 
     parse_results = $$;
@@ -134,15 +134,18 @@ class_list
 
 /* If no parent is specified, the class inherits from the Object class. */
 class	
-  : CLASS TYPEID '{' feature_list '}' ';'
+  : CLASS TYPEID '{' feature_list '}'
 	{ 
     $$ = class_($2, idtable.add_string("Object"), $4,
 		stringtable.add_string(curr_filename));
   }
-	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
+	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}'
 	{ 
     $$ = class_($2, $4, $6, stringtable.add_string(curr_filename));
   }
+  | CLASS error '{' feature_list '}'
+  | CLASS TYPEID INHERITS TYPEID '{' feature_list error
+  | CLASS TYPEID INHERITS TYPEID error feature_list '}'
 	;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -170,6 +173,7 @@ feature
   {
     $$ = attr($1, $3, no_expr());
   }
+  | error
   ;
 
 formal_list
@@ -345,6 +349,7 @@ expression
   {
     $$ = string_const($1);
   }
+  | error
   ;
 
 let_expression 
@@ -364,6 +369,9 @@ let_expression
   { 
     $$ = let($1, $3, $5, $7); 
   }
+  | error IN expression
+  | error ',' let_expression
+  | error let_expression
 ;
   
 
